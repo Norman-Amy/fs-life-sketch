@@ -1,8 +1,7 @@
 <link rel="import" href="../polymer/polymer.html">
-<!-- <link rel="import" href="../fs-person-data-service/fs-person-data-service.html" async> -->
 <link rel="import" href="../dialog-el/dialog-el.html">
 <link rel="import" href="../wc-i18n/wc-i18n.html">
-<link rel="import" href="../oak-ajax-behavior/oak-ajax-behavior.html" async>
+<link rel="import" href="../oak-ajax-behavior/oak-ajax-behavior.html">
 
 <!--
 # fs-life-sketch
@@ -12,8 +11,8 @@ Example 1:
 
     <fs-life-sketch person-id='L2Q8-R9Q' persist-labels></fs-life-sketch>
 
-**Note: One current bug is that the person-data-service has a
-lifesketchConclusion property, but it only seems to have a
+**Note: The person-data-service has a
+lifesketchConclusion property, but it only has a
 value of 'null'. When that's fixed we will need to implement
 a way to read and write to that data and cache. **
 
@@ -33,7 +32,6 @@ a way to read and write to that data and cache. **
         flex-wrap: wrap;
         width: 100%;
         overflow: hidden;
-        position: relative;
         @apply(--content);
       }
 
@@ -52,7 +50,6 @@ a way to read and write to that data and cache. **
         z-index: 1;
       }
 
-
     </style>
 
 
@@ -63,8 +60,10 @@ a way to read and write to that data and cache. **
       <div hidden$="[[_hideReadOnlyViews(showForm, loading)]]">
         <div class="read-only-view" hidden$="[[_isEmptyString(lifesketch)]]">
           <p>[[lifesketch]]</p>
-          <button id="openForm" on-tap="_toggleForm">[[i18n('EDIT')]]</button>
-          <button id="openDeleteModal" on-tap="_toggleDeleteDialog">[[i18n('DELETE')]]</button>
+          <div class="read-only-buttons">
+            <button id="openForm" on-tap="_toggleForm">[[i18n('EDIT')]]</button>
+            <button id="openDeleteModal" on-tap="_toggleDeleteDialog">[[i18n('DELETE')]]</button>
+          </div>
         </div>
         <div class="add-view" hidden$="[[!_isEmptyString(lifesketch)]]">
           <button id="openForm" on-tap="_toggleForm">[[i18n('ADD')]]</button>
@@ -88,10 +87,11 @@ a way to read and write to that data and cache. **
       </div>
       <dialog-el id="deleteModal">
         <h1>[[i18n('DELETE_LIFESKETCH_TITLE')]]</h1>
-        <label>[[i18n('DELETE_REASON_LABEL')]]</label>
+        <label>[[i18n('DELETE_REASON_LABEL')]]</label><br/>
         <textarea id="deleteModalReason"></textarea>
         <div class="buttons">
-          <button id="deleteLifesketch" on-tap="_deleteLifesketch">[[i18n('DELETE')]]</button><button id="cancelDelete" on-tap="_cancelDeleteModal">[[i18n('CANCEL')]]</button>
+          <button id="deleteLifesketch" on-tap="_prepareDeleteLifesketch">[[i18n('DELETE')]]</button>
+          <button id="cancelDelete" on-tap="_toggleDeleteDialog">[[i18n('CANCEL')]]</button>
         </div>
       </dialog-el>
     </div>
@@ -115,14 +115,17 @@ a way to read and write to that data and cache. **
           readOnly: true
         },
         /* The lifesketch to be displayed
-         * @type {Object}
+         * @type {String}
          */
         lifesketch: {
-          type: Object,
+          type: String,
           value: ''
         },
+        /* The conclusion id of the lifesketch being displayed
+         * @type {String}
+         */
         conclusionId: {
-          type: Object,
+          type: String,
           value: ''
         },
         /* Determine if the form for editing a lifesketch should be showing.
@@ -139,10 +142,16 @@ a way to read and write to that data and cache. **
           type: String,
           value: ""
         },
+        /* Determine if a loading spinner should show. Used for a CSS class.
+         * @type {String}
+         */
         loading: {
           type: String,
           value: "loading"
         },
+        /* Determine if an error message should show. Used for a CSS class. Not working as planned.
+         * @type {String}
+         */
         fsAlert: {
           type: String,
           value: ""
@@ -150,9 +159,26 @@ a way to read and write to that data and cache. **
       },
 
       observers: [
-        '__personObserver(personId, sessionId, ajaxBase)'
+        '__personObserver(personId, sessionId, ajaxBase)',
+        '__lifesketchObserver(lifesketch, i18n)'
       ],
 
+      //Observers
+      /**
+       * Listens for when the lifesketch has changed. Will determine the read more/less functionality.
+       * @param {String} lifesketch - the full text of the lifesketch
+       * @param {function} i18n - The function for grabbing the locale strings that will be needed for MORE/LESS links.
+       */
+      __lifesketchObserver: function(lifesketch, i18n){
+        // TODO: Determine more/less functionality
+      },
+
+      /**
+       * Listens for when the person has changed and will either request the data or use data already passed in.
+       * @param {String} personId - The id of the person to be requested.
+       * @param {String} sessionId - The id of the session for the request.
+       * @param {String} ajaxBase - The environment to make the request against (beta, integration, etc.).
+       */
       __personObserver: function(personId, sessionId, ajaxBase) {
         if (!sessionId || !ajaxBase) return;
         var pid,
@@ -171,50 +197,79 @@ a way to read and write to that data and cache. **
         if (pid) {
           this._getLifesketch(pid).then(function(data){
             that.lifesketch = data.details.text || "";
-            that.loading = "";
+            that.conclusionId = data.id || "";
           }, function(err){
             console.warn("Something went wrong...", err);
-            that.loading = "";
             that.fsAlert = "fs-alert fs-alert--error";
+          }).then(function(){
+            that.loading = "";
           });
         }
       },
 
+      // Element Behavior
+
+      /**
+       * Determines is the string passed in is empty and returns the Boolean result.
+       * Note: This is needed because `hidden$="[[someString]]"` is still considered true for an empty string.
+       * @param {String} string - The string to check.
+       * @return {Boolean}
+       */
       _isEmptyString: function(string) {
         return string === "";
       },
 
+      /**
+       * Determines if we should hide the lifesketch or not. If the showForm property is set to true or the data is currently loading, return true. Otherwise, return false.
+       * @param {Boolean} showForm - The boolean that says whether the edit form is showing or not.
+       * @param {String} loading - The loading status.
+       * @return {Boolean}
+       */
       _hideReadOnlyViews: function(showForm, loading) {
         return showForm || !this._isEmptyString(loading);
       },
 
-      _saveLifesketch: function(e) {
-        var newLifesketch = this.$$('#lifesketchTextarea').value || "";
-        var justification = this.$$('#justificationTextarea').value;
-        var that = this;
+      /**
+       * Triggered by the Save button's on-tap event.
+       * Grabs the values of the lifesketch and justification textareas in the edit form and
+       * determines whether or not _editLifesketch or _addLifesketch should be called.
+       * Closes the form after everything is done.
+       */
+      _saveLifesketch: function() {
+        var newLifesketch,
+            justification,
+            that = this;
+
+        // Grab the inputted values
+        newLifesketch = this.$$('#lifesketchTextarea').value || "";
+        justification = this.$$('#justificationTextarea').value;
+
+        // Show the loading spinner
         this.loading = "loading";
+
+        // TODO - Make it so the Save button is disabled until the new lifesketch is inputted.
         if (!newLifesketch) {
           console.error('No lifesketch inputted. Work on disabling the save button.')
         } else {
+          // If there was already a lifesketch, edit it, otherwise, add.
           if (this.lifesketch) {
-            // .then?
             this._editLifesketch(newLifesketch, justification).then(function(resp){
+              that.lifesketch = resp.value.value;
               that.conclusionId = resp.conclusionId;
               that.$$('#justificationTextarea').value = "";
-              that.loading = "";
             }, function(error){
               console.error("Could not edit lifesketch", error);
+            }).then(function(){
               that.loading = "";
-            });;
+            });
           } else {
-            // .then?
             this._addLifesketch(newLifesketch).then(function(resp){
               that.lifesketch = resp.value.value;
               that.conclusionId = resp.conclusionId;
               // TODO - Add Modified by text.
-              that.loading = "";
             }, function(error){
               console.error("Could not add lifesketch", error);
+            }).then(function(){
               that.loading = "";
             });
           }
@@ -222,12 +277,22 @@ a way to read and write to that data and cache. **
         this._toggleForm();
       },
 
-      _cancelForm: function(e) {
+      /**
+       * Triggered by the Cancel button's on-tap event (editForm).
+       * Clears any inputted values of the lifesketch and justification textareas in the edit form and
+       *  then closes the form.
+       */
+      _cancelForm: function() {
         this.$$('#lifesketchTextarea').value = this.lifesketch;
         this.$$('#justificationTextarea').value = "";
         this._toggleForm();
       },
 
+      /**
+       * Service call to GET the person's lifesketch
+       * @param {String} personId - The personId to request data for.
+       * @return {Promise} the resolved Promise from the fetch call.
+       */
       _getLifesketch: function(personId) {
         if (personId && this.sessionId) {
           var that = this;
@@ -257,6 +322,11 @@ a way to read and write to that data and cache. **
         }
       },
 
+      /**
+       * Service call to POST the person's lifesketch on an add.
+       * @param {String} lifesketch - The data to be saved.
+       * @return {Promise} the resolved Promise from the fetch call.
+       */
       _addLifesketch: function(lifesketch) {
         if (this.personId && this.sessionId) {
           var that = this;
@@ -290,6 +360,12 @@ a way to read and write to that data and cache. **
         }
       },
 
+      /**
+       * Service call to PUT the person's lifesketch on an edit.
+       * @param {String} lifesketch - The data to be saved.
+       * @param {String} justification - The reason for the change.
+       * @return {Promise} the resolved Promise from the fetch call.
+       */
       _editLifesketch: function(lifesketch, justification) {
         if (this.personId && this.sessionId) {
           var that = this;
@@ -303,7 +379,7 @@ a way to read and write to that data and cache. **
             var EDIT_LIFESKETCH_URL = that.ajaxBase + "/tf/person/" + that.personId + "/conclusion/" + that.conclusionId;
             EDIT_LIFESKETCH_URL += "?fsSessionId=" + that.sessionId;
             var config = {
-              method: 'POST',
+              method: 'PUT',
               headers: new Headers({'content-type': 'application/json'}),
               body: JSON.stringify(tfLifesketch),
               credentials: 'same-origin'
@@ -325,22 +401,73 @@ a way to read and write to that data and cache. **
         }
       },
 
-      _deleteLifesketch: function() {
-        console.log('deleting lifesketch of ' + this.personId);
+      /**
+       * Triggered by the Delete button's on-tap event (deleteModal).
+       * Handles the call to delete the lifesketch and then
+       * resets the lifesketch if successful.
+       */
+      _prepareDeleteLifesketch: function() {
+        var that = this;
+        this.loading = "loading";
+        this._deleteLifesketch(this.$$('#deleteModalReason').value).then(function(){
+          that.lifesketch = "";
+          that.conclusionId = "";
+          that._toggleDeleteDialog();
+        }, function(error){
+          console.error("Could not delete lifesketch", error);
+        }).then(function(){
+          that.loading = "";
+        });
       },
 
-      _cancelDeleteModal: function() {
-        console.log("Cancel that...");
+      /**
+       * Service call to DELETE the person's lifesketch.
+       * @param {String} justification - The reason for the deletion.
+       * @return {Promise} the resolved Promise from the fetch call.
+       */
+      _deleteLifesketch: function(justification) {
+        if (this.personId && this.sessionId) {
+          var that = this;
+          return new Promise(function(resolve, reject) {
+            var DELETE_LIFESKETCH_URL = that.ajaxBase + "/tf/person/" + that.personId + "/conclusion/" + that.conclusionId;
+            DELETE_LIFESKETCH_URL += "?fsSessionId=" + that.sessionId;
+            var config = {
+              method: 'DELETE',
+              headers: new Headers({'content-type': 'application/json'}),
+              body: JSON.stringify({ 'justification' : justification}),
+              credentials: 'same-origin'
+            };
+            return fetch(DELETE_LIFESKETCH_URL, config).then(function(resp){
+              if (resp.status < 400) {
+                resolve();
+              }
+              reject(resp.status);
+            }).catch(reject);
+          });
+        }
       },
 
+      /**
+       * Triggered by the OpenEditForm buttons' on-tap events.
+       * Toggles the value of the showForm property.
+       */
       _toggleForm: function() {
         this.showForm = !this.showForm;
       },
 
+      /**
+       * Triggered by the Delete button's on-tap event (read only view) or the Cancel button of the deleteModal.
+       * Opens or closes the dialog-el for the deleteModal
+       * Clears the justification textarea on close.
+       */
       _toggleDeleteDialog: function() {
-        console.log('show delete dialog');
         var dialog = this.$$("dialog-el");
-        dialog.show();
+        if (dialog.hasAttribute('hidden')) {
+          dialog.show();
+        } else {
+          dialog.close();
+          this.$$('#deleteModalReason').value = "";
+        }
       }
     });
   </script>
