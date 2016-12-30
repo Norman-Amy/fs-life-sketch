@@ -8,6 +8,7 @@
     "fs-person-data-service": "fs-webdev/fs-person-data-service#master",
     "oak-ajax-behavior": "FamilySearchElements/oak-ajax-behavior#^1.0.0",
     "fs-styles": "fs-webdev/fs-styles",
+    "dialog-el": "git+https://github.com/jshcrowthe/dialog-el",
     "fetch": "github/fetch#^1.0.0"
   },
   "devDependencies": {

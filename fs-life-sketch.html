@@ -1,7 +1,7 @@
 <link rel="import" href="../polymer/polymer.html">
 <!-- <link rel="import" href="../fs-person-data-service/fs-person-data-service.html" async> -->
+<link rel="import" href="../dialog-el/dialog-el.html">
 <link rel="import" href="../wc-i18n/wc-i18n.html">
-<link rel="import" href="../fs-styles/fs-styles.html">
 <link rel="import" href="../oak-ajax-behavior/oak-ajax-behavior.html" async>
 
 <!--
@@ -64,7 +64,7 @@ a way to read and write to that data and cache. **
         <div class="read-only-view" hidden$="[[_isEmptyString(lifesketch)]]">
           <p>[[lifesketch]]</p>
           <button id="openForm" on-tap="_toggleForm">[[i18n('EDIT')]]</button>
-          <button id="delete" on-tap="_toggleDeleteDialog">[[i18n('DELETE')]]</button>
+          <button id="openDeleteModal" on-tap="_toggleDeleteDialog">[[i18n('DELETE')]]</button>
         </div>
         <div class="add-view" hidden$="[[!_isEmptyString(lifesketch)]]">
           <button id="openForm" on-tap="_toggleForm">[[i18n('ADD')]]</button>
@@ -86,6 +86,14 @@ a way to read and write to that data and cache. **
           <button id="save" on-tap="_saveLifesketch">[[i18n('SAVE')]]</button><button id="cancel" on-tap="_toggleForm">[[i18n('CANCEL')]]</button>
         </div>
       </div>
+      <dialog-el id="deleteModal">
+        <h1>[[i18n('DELETE_LIFESKETCH_TITLE')]]</h1>
+        <label>[[i18n('DELETE_REASON_LABEL')]]</label>
+        <textarea id="deleteModalReason"></textarea>
+        <div class="buttons">
+          <button id="deleteLifesketch" on-tap="_deleteLifesketch">[[i18n('DELETE')]]</button><button id="cancelDelete" on-tap="_cancelDeleteModal">[[i18n('CANCEL')]]</button>
+        </div>
+      </dialog-el>
     </div>
 
   </template>
@@ -107,11 +115,15 @@ a way to read and write to that data and cache. **
           readOnly: true
         },
         /* The lifesketch to be displayed
-         * @type {String}
+         * @type {Object}
          */
         lifesketch: {
-          type: String,
-          value: ""
+          type: Object,
+          value: ''
+        },
+        conclusionId: {
+          type: Object,
+          value: ''
         },
         /* Determine if the form for editing a lifesketch should be showing.
          * @type {Boolean}
@@ -179,20 +191,33 @@ a way to read and write to that data and cache. **
       _saveLifesketch: function(e) {
         var newLifesketch = this.$$('#lifesketchTextarea').value || "";
         var justification = this.$$('#justificationTextarea').value;
+        var that = this;
+        this.loading = "loading";
         if (!newLifesketch) {
           console.error('No lifesketch inputted. Work on disabling the save button.')
         } else {
           if (this.lifesketch) {
             // .then?
-            this._editLifesketch(newLifesketch);
+            this._editLifesketch(newLifesketch, justification).then(function(resp){
+              that.conclusionId = resp.conclusionId;
+              that.$$('#justificationTextarea').value = "";
+              that.loading = "";
+            }, function(error){
+              console.error("Could not edit lifesketch", error);
+              that.loading = "";
+            });;
           } else {
             // .then?
-            this._addLifesketch(newLifesketch);
+            this._addLifesketch(newLifesketch).then(function(resp){
+              that.lifesketch = resp.value.value;
+              that.conclusionId = resp.conclusionId;
+              // TODO - Add Modified by text.
+              that.loading = "";
+            }, function(error){
+              console.error("Could not add lifesketch", error);
+              that.loading = "";
+            });
           }
-          //The following would go in the .then:
-          this.lifesketch = newLifesketch;
-          // Ensure this reset happens after the save function is called and is successful.
-          this.$$('#justificationTextarea').value = "";
         }
         this._toggleForm();
       },
@@ -233,7 +258,6 @@ a way to read and write to that data and cache. **
       },
 
       _addLifesketch: function(lifesketch) {
-        console.log('adding lifesketch of ' + this.personId);
         if (this.personId && this.sessionId) {
           var that = this;
           return new Promise(function(resolve, reject) {
@@ -241,22 +265,22 @@ a way to read and write to that data and cache. **
             conclusionType: "FACT",
             value: {value: lifesketch, type: "http://familysearch.org/v1/LifeSketch"},
             attribution: {changeMessage: ""}};
-            var POST_LIFESKETCH_URL = that.ajaxBase + "/tf/person/" + that.personId + "/conclusion/fact";
-            POST_LIFESKETCH_URL += "?fsSessionId=" + that.sessionId;
+            var ADD_LIFESKETCH_URL = that.ajaxBase + "/tf/person/" + that.personId + "/conclusion/fact";
+            ADD_LIFESKETCH_URL += "?fsSessionId=" + that.sessionId;
             var config = {
               method: 'POST',
               headers: new Headers({'content-type': 'application/json'}),
               body: JSON.stringify(tfLifesketch),
               credentials: 'same-origin'
             };
-            return fetch(POST_LIFESKETCH_URL, config).then(function(resp){
+            return fetch(ADD_LIFESKETCH_URL, config).then(function(resp){
               if (resp.status < 400) {
                 return resp.json();
               }
               reject(resp.status);
             }).then(function(resp){
               if (resp) {
-                resolve(resp.data);
+                resolve(resp);
               }
             }, function(error) {
               console.warn(error.message);
@@ -266,12 +290,47 @@ a way to read and write to that data and cache. **
         }
       },
 
-      _editLifesketch: function() {
-        console.log('editing lifesketch of ' + this.personId);
+      _editLifesketch: function(lifesketch, justification) {
+        if (this.personId && this.sessionId) {
+          var that = this;
+          return new Promise(function(resolve, reject) {
+            var tfLifesketch = {
+              conclusionId: that.conclusionId,
+              conclusionType: "FACT",
+              value: {value: lifesketch, type: "http://familysearch.org/v1/LifeSketch"},
+              attribution: {changeMessage: justification}
+            };
+            var EDIT_LIFESKETCH_URL = that.ajaxBase + "/tf/person/" + that.personId + "/conclusion/" + that.conclusionId;
+            EDIT_LIFESKETCH_URL += "?fsSessionId=" + that.sessionId;
+            var config = {
+              method: 'POST',
+              headers: new Headers({'content-type': 'application/json'}),
+              body: JSON.stringify(tfLifesketch),
+              credentials: 'same-origin'
+            };
+            return fetch(EDIT_LIFESKETCH_URL, config).then(function(resp){
+              if (resp.status < 400) {
+                return resp.json();
+              }
+              reject(resp.status);
+            }).then(function(resp){
+              if (resp) {
+                resolve(resp);
+              }
+            }, function(error) {
+              console.warn(error.message);
+              resolve({ 'details': { 'text': null } });
+            }).catch(reject);
+          });
+        }
       },
 
       _deleteLifesketch: function() {
         console.log('deleting lifesketch of ' + this.personId);
+      },
+
+      _cancelDeleteModal: function() {
+        console.log("Cancel that...");
       },
 
       _toggleForm: function() {
@@ -280,6 +339,8 @@ a way to read and write to that data and cache. **
 
       _toggleDeleteDialog: function() {
         console.log('show delete dialog');
+        var dialog = this.$$("dialog-el");
+        dialog.show();
       }
     });
   </script>
