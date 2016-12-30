@@ -1,0 +1,33 @@
+{
+  "name": "fs-life-sketch",
+  "description": "life events web component that displays a read-only list of a person's vital conclusions (birth, death, etc).",
+  "main": "fs-life-sketch.html",
+  "dependencies": {
+    "polymer": "Polymer/polymer#^1.4.0",
+    "wc-i18n": "jshcrowthe/wc-i18n#2.1.0",
+    "fs-person-data-service": "fs-webdev/fs-person-data-service#master",
+    "oak-ajax-behavior": "FamilySearchElements/oak-ajax-behavior#^1.0.0",
+    "fs-styles": "fs-webdev/fs-styles",
+    "fetch": "github/fetch#^1.0.0"
+  },
+  "devDependencies": {
+    "es6-promise-polyfill": "git+https://github.com/taylorhakes/promise-polyfill#6.0.2",
+    "fetch-mock": "https://unpkg.com/fetch-mock@5.5.0/es5/client-browserified.js",
+    "fs-demo": "fs-webdev/fs-demo#master",
+    "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
+    "iron-demo-helpers": "PolymerElements/iron-demo-helpers#^1.0.0",
+    "webcomponentsjs": "webcomponents/webcomponentsjs#^0.7.0",
+    "web-component-tester": "Polymer/web-component-tester#^5.0.0"
+  },
+  "ignore": [
+    ".*",
+    "bin/",
+    "bin/*",
+    "test/",
+    "test/*",
+    "wct.conf.json"
+  ],
+  "resolutions": {
+    "mocha": "^3.1.2"
+  }
+}

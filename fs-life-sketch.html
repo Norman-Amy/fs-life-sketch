@@ -1,0 +1,286 @@
+<link rel="import" href="../polymer/polymer.html">
+<!-- <link rel="import" href="../fs-person-data-service/fs-person-data-service.html" async> -->
+<link rel="import" href="../wc-i18n/wc-i18n.html">
+<link rel="import" href="../fs-styles/fs-styles.html">
+<link rel="import" href="../oak-ajax-behavior/oak-ajax-behavior.html" async>
+
+<!--
+# fs-life-sketch
+An element for displaying a person's life sketch.
+
+Example 1:
+
+    <fs-life-sketch person-id='L2Q8-R9Q' persist-labels></fs-life-sketch>
+
+**Note: One current bug is that the person-data-service has a
+lifesketchConclusion property, but it only seems to have a
+value of 'null'. When that's fixed we will need to implement
+a way to read and write to that data and cache. **
+
+@demo demo/index.html
+-->
+
+<dom-module id="fs-life-sketch">
+  <template>
+    <style>
+      .content {
+        display: -ms-flexbox;  /* TWEENER - IE 10 */
+        display: -webkit-flex; /* NEW - Safari 6.1+. iOS 7.1+, BB10 */
+        display: flex;
+        -ms-flex-flow: column;
+        flex-flow: column;
+        -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+        width: 100%;
+        overflow: hidden;
+        position: relative;
+        @apply(--content);
+      }
+
+      .loading {
+        background-image: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkFydCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiIHdpZHRoPSI2NHB4IiBoZWlnaHQ9IjY0cHgiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZW5hYmxlLWJhY2tncm91bmQ9Im5ldyAwIDAgMTYgMTYiIHhtbDpzcGFjZT0icHJlc2VydmUiPjxnIG9wYWNpdHk9IjAuMSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89Ii4xIiBkdXI9IjFzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIgYmVnaW49IjAuOTkiLz48cGF0aCBmaWxsPSIjMzMzMzMxIiBkPSJNOC45MzgsMS4xMjVMOC41LDRDOC40NTgsNC4yNzYsOC4yLDQuNDY2LDcuOTI0LDQuNDI0QzcuNyw0LjM5LDcuNTMzLDQuMjEzLDcuNSw0TDcuMDYyLDEuMTI1Yy0wLjA3OS0wLjUxOCwwLjI3Ny0xLjAwMSwwLjc5NS0xLjA4YzAuNTE4LTAuMDc5LDEuMDAxLDAuMjc3LDEuMDgsMC43OTVDOC45NTIsMC45MzUsOC45NTEsMS4wMzQsOC45MzgsMS4xMjV6Ii8+PC9nPjxnIG9wYWNpdHk9IjAuMSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89Ii4xIiBkdXI9IjFzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIgYmVnaW49IjAuOTAiLz48cGF0aCBmaWxsPSIjMzMzMzMxIiBkPSJNNS4zNzUsMS41NzdsMS4wNTksMi43MDhjMC4xMDIsMC4yNi0wLjAyNywwLjU1My0wLjI4NywwLjY1NUM1LjkzNSw1LjAyMyw1LjcwMiw0Ljk1NCw1LjU2Nyw0Ljc4NkwzLjc1LDIuNTE1QzMuNDIzLDIuMTA1LDMuNDksMS41MDksMy44OTksMS4xODJDNC4zMDgsMC44NTQsNC45MDUsMC45MjEsNS4yMzIsMS4zM0M1LjI5MiwxLjQwNiw1LjM0LDEuNDkyLDUuMzc1LDEuNTc3eiIvPjwvZz48ZyBvcGFjaXR5PSIwLjEiPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9Im9wYWNpdHkiIGZyb209IjEiIHRvPSIuMSIgZHVyPSIxcyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiIGJlZ2luPSIwLjgxIi8+PHBhdGggZmlsbD0iIzMzMzMzMSIgZD0iTTIuNTE1LDMuNzVsMi4yNzEsMS44MTZjMC4yMTgsMC4xNzUsMC4yNTMsMC40OTMsMC4wNzksMC43MTFDNC43MjMsNi40NTUsNC40ODYsNi41MTEsNC4yODUsNi40MzNMMS41NzcsNS4zNzRDMS4wODksNS4xODMsMC44NDksNC42MzMsMS4wMzksNC4xNDZDMS4yMywzLjY1OCwxLjc4LDMuNDE3LDIuMjY4LDMuNjA3QzIuMzU4LDMuNjQzLDIuNDQzLDMuNjkzLDIuNTE1LDMuNzV6Ii8+PC9nPjxnIG9wYWNpdHk9IjAuMSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89Ii4xIiBkdXI9IjFzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIgYmVnaW49IjAuNzIiLz48cGF0aCBmaWxsPSIjMzMzMzMxIiBkPSJNMS4xMjQsNy4wNjJMMy45OTksNy41YzAuMjc2LDAuMDQyLDAuNDY2LDAuMywwLjQyNCwwLjU3NkM0LjM4OSw4LjMsNC4yMTIsOC40NjcsMy45OTksOC41TDEuMTI0LDguOTM3QzAuNjA2LDkuMDE2LDAuMTIzLDguNjYsMC4wNDQsOC4xNDJjLTAuMDc5LTAuNTE4LDAuMjc3LTEuMDAxLDAuNzk1LTEuMDhDMC45MzQsNy4wNDcsMS4wMzMsNy4wNDksMS4xMjQsNy4wNjJ6Ii8+PC9nPjxnIG9wYWNpdHk9IjAuMSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89Ii4xIiBkdXI9IjFzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIgYmVnaW49IjAuNjMiLz48cGF0aCBmaWxsPSIjMzMzMzMxIiBkPSJNMS41NzYsMTAuNjI1bDIuNzA5LTEuMDU5YzAuMjYtMC4xMDIsMC41NTQsMC4wMjcsMC42NTUsMC4yODdjMC4wODMsMC4yMTEsMC4wMTMsMC40NDQtMC4xNTUsMC41NzlMMi41MTQsMTIuMjVjLTAuNDA5LDAuMzI3LTEuMDA2LDAuMjYxLTEuMzMzLTAuMTQ4cy0wLjI2MS0xLjAwNiwwLjE0OC0xLjMzM0MxLjQwNSwxMC43MDgsMS40OTEsMTAuNjYsMS41NzYsMTAuNjI1eiIvPjwvZz48ZyBvcGFjaXR5PSIwLjEiPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9Im9wYWNpdHkiIGZyb209IjEiIHRvPSIuMSIgZHVyPSIxcyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiIGJlZ2luPSIwLjU0Ii8+PHBhdGggZmlsbD0iIzMzMzMzMSIgZD0iTTMuNzUsMTMuNDg1bDEuODE2LTIuMjcxYzAuMTc1LTAuMjE4LDAuNDkzLTAuMjUzLDAuNzExLTAuMDc5YzAuMTc3LDAuMTQyLDAuMjMzLDAuMzc4LDAuMTU1LDAuNTc5bC0xLjA1OSwyLjcwOGMtMC4xOTEsMC40ODgtMC43NDEsMC43MjktMS4yMjksMC41MzhjLTAuNDg4LTAuMTkxLTAuNzI5LTAuNzQxLTAuNTM4LTEuMjI5QzMuNjQyLDEzLjY0MywzLjY5MiwxMy41NTgsMy43NSwxMy40ODV6Ii8+PC9nPjxnIG9wYWNpdHk9IjAuMSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89Ii4xIiBkdXI9IjFzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIgYmVnaW49IjAuNDUiLz48cGF0aCBmaWxsPSIjMzMzMzMxIiBkPSJNNy4wNjIsMTQuODc1TDcuNDk5LDEyYzAuMDQyLTAuMjc2LDAuMy0wLjQ2NiwwLjU3Ni0wLjQyNEM4LjI5OSwxMS42MTEsOC40NjYsMTEuNzg4LDguNDk5LDEybDAuNDM4LDIuODc1YzAuMDc5LDAuNTE4LTAuMjc3LDEuMDAxLTAuNzk1LDEuMDhjLTAuNTE4LDAuMDc5LTEuMDAxLTAuMjc3LTEuMDgtMC43OTVDNy4wNDcsMTUuMDY1LDcuMDQ4LDE0Ljk2Niw3LjA2MiwxNC44NzV6Ii8+PC9nPjxnIG9wYWNpdHk9IjAuMSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ib3BhY2l0eSIgZnJvbT0iMSIgdG89Ii4xIiBkdXI9IjFzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIgYmVnaW49IjAuMzYiLz48cGF0aCBmaWxsPSIjMzMzMzMxIiBkPSJNMTAuNjI1LDE0LjQyM2wtMS4wNTktMi43MDhjLTAuMTAyLTAuMjYsMC4wMjctMC41NTMsMC4yODctMC42NTVjMC4yMTEtMC4wODMsMC40NDQtMC4wMTMsMC41NzksMC4xNTVsMS44MTYsMi4yNzFjMC4zMjcsMC40MDksMC4yNjEsMS4wMDYtMC4xNDgsMS4zMzNjLTAuNDA5LDAuMzI3LTEuMDA2LDAuMjYxLTEuMzMzLTAuMTQ4QzEwLjcwNywxNC41OTUsMTAuNjU5LDE0LjUwOSwxMC42MjUsMTQuNDIzeiIvPjwvZz48ZyBvcGFjaXR5PSIwLjEiPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9Im9wYWNpdHkiIGZyb209IjEiIHRvPSIuMSIgZHVyPSIxcyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiIGJlZ2luPSIwLjI3Ii8+PHBhdGggZmlsbD0iIzMzMzMzMSIgZD0iTTEzLjQ4NCwxMi4yNWwtMi4yNzEtMS44MTZjLTAuMjE4LTAuMTc0LTAuMjUzLTAuNDkzLTAuMDc5LTAuNzExYzAuMTQyLTAuMTc3LDAuMzc4LTAuMjMzLDAuNTc5LTAuMTU1bDIuNzA5LDEuMDU5YzAuNDg4LDAuMTkxLDAuNzI5LDAuNzQxLDAuNTM4LDEuMjI5cy0wLjc0MSwwLjcyOS0xLjIyOSwwLjUzOEMxMy42NDIsMTIuMzU4LDEzLjU1NywxMi4zMDgsMTMuNDg0LDEyLjI1eiIvPjwvZz48ZyBvcGFjaXR5PSIwLjEiPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9Im9wYWNpdHkiIGZyb209IjEiIHRvPSIuMSIgZHVyPSIxcyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiIGJlZ2luPSIwLjE4Ii8+PHBhdGggZmlsbD0iIzMzMzMzMSIgZD0iTTE0Ljg3NSw4LjkzOEwxMiw4LjUwMWMtMC4yNzYtMC4wNDItMC40NjYtMC4zLTAuNDI0LTAuNTc2QzExLjYxLDcuNzAxLDExLjc4Nyw3LjUzNCwxMiw3LjUwMWwyLjg3NS0wLjQzOGMwLjUxOC0wLjA3OSwxLjAwMSwwLjI3NywxLjA4LDAuNzk0YzAuMDc5LDAuNTE4LTAuMjc3LDEuMDAxLTAuNzk0LDEuMDgxQzE1LjA2NSw4Ljk1MywxNC45NjYsOC45NTIsMTQuODc1LDguOTM4eiIvPjwvZz48ZyBvcGFjaXR5PSIwLjEiPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9Im9wYWNpdHkiIGZyb209IjEiIHRvPSIuMSIgZHVyPSIxcyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiIGJlZ2luPSIwLjA5Ii8+PHBhdGggZmlsbD0iIzMzMzMzMSIgZD0iTTE0LjQyMyw1LjM3NWwtMi43MDgsMS4wNTljLTAuMjYsMC4xMDItMC41NTMtMC4wMjctMC42NTUtMC4yODdjLTAuMDgzLTAuMjExLTAuMDEzLTAuNDQ0LDAuMTU1LTAuNTc5bDIuMjcxLTEuODE3YzAuNDA5LTAuMzI3LDEuMDA1LTAuMjYxLDEuMzMzLDAuMTQ4YzAuMzI4LDAuNDA5LDAuMjYxLDEuMDA2LTAuMTQ4LDEuMzMzQzE0LjU5NSw1LjI5MiwxNC41MDgsNS4zNDEsMTQuNDIzLDUuMzc1eiIvPjwvZz48ZyBvcGFjaXR5PSIwLjEiPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9Im9wYWNpdHkiIGZyb209IjEiIHRvPSIuMSIgZHVyPSIxcyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiIGJlZ2luPSIwIi8+PHBhdGggZmlsbD0iIzMzMzMzMSIgZD0iTTEyLjI1LDIuNTE1bC0xLjgxNSwyLjI3MUMxMC4yNiw1LjAwNCw5Ljk0MSw1LjA0LDkuNzIzLDQuODY1QzkuNTQ2LDQuNzI0LDkuNDksNC40ODcsOS41NjgsNC4yODZsMS4wNTgtMi43MDhjMC4xOS0wLjQ4OCwwLjc0LTAuNzI5LDEuMjI4LTAuNTM4YzAuNDg4LDAuMTksMC43MjksMC43NCwwLjUzOSwxLjIyOEMxMi4zNTcsMi4zNTgsMTIuMzA3LDIuNDQzLDEyLjI1LDIuNTE1eiIvPjwvZz48cmVjdCBmaWxsPSJub25lIiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiLz48L3N2Zz4=);
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: 100%;
+        height: 32px;
+        left: 50%;
+        left: calc(50% - 16px);
+        top: 50%;
+        top: calc(50% - 16px);
+        width: 32px;
+        content: "";
+        z-index: 1;
+      }
+
+
+    </style>
+
+
+    <div class="content">
+      <h2>Life Sketch</h2>
+      <div class$="[[loading]]"></div>
+      <div class$="[[fsAlert]]"></div>
+      <div hidden$="[[_hideReadOnlyViews(showForm, loading)]]">
+        <div class="read-only-view" hidden$="[[_isEmptyString(lifesketch)]]">
+          <p>[[lifesketch]]</p>
+          <button id="openForm" on-tap="_toggleForm">[[i18n('EDIT')]]</button>
+          <button id="delete" on-tap="_toggleDeleteDialog">[[i18n('DELETE')]]</button>
+        </div>
+        <div class="add-view" hidden$="[[!_isEmptyString(lifesketch)]]">
+          <button id="openForm" on-tap="_toggleForm">[[i18n('ADD')]]</button>
+        </div>
+      </div>
+      <div class="form" hidden$="[[!showForm]]">
+        <div id="editForm">
+          <label>[[i18n('LIFESKETCH_LABEL')]]</label><br/>
+          <!-- TODO: Textarea needs a change/input listener for the modifiedByText and isDirty flags. -->
+          <textarea id="lifesketchTextarea">[[lifesketch]]</textarea><br/>
+          <div class="justification" hidden$="[[!lifesketch]]">
+            <label>[[i18n('JUSTIFICATION_LABEL')]]</label><br/>
+            <textarea id="justificationTextarea"></textarea><br/>
+          </div>
+          <div class="contributor">
+          <!-- TODO: This needs to work... -->
+            <span>[[modifiedByText]]</span>
+          </div>
+          <button id="save" on-tap="_saveLifesketch">[[i18n('SAVE')]]</button><button id="cancel" on-tap="_toggleForm">[[i18n('CANCEL')]]</button>
+        </div>
+      </div>
+    </div>
+
+  </template>
+
+  <script>
+    Polymer({
+      is: 'fs-life-sketch',
+      behaviors: [
+        WCI18n(),
+        OakAJAXBehavior
+      ],
+      properties: {
+        /* Tells the person-data-service to request the full person data. Always keep true.
+         * @type {Boolean}
+         */
+        fullPerson: {
+          type: Boolean,
+          value: true,
+          readOnly: true
+        },
+        /* The lifesketch to be displayed
+         * @type {String}
+         */
+        lifesketch: {
+          type: String,
+          value: ""
+        },
+        /* Determine if the form for editing a lifesketch should be showing.
+         * @type {Boolean}
+         */
+        showForm: {
+          type: Boolean,
+          value: false
+        },
+        /* The "Modified <date> by <contributor>" text.
+         * @type {String}
+         */
+        modifiedByText: {
+          type: String,
+          value: ""
+        },
+        loading: {
+          type: String,
+          value: "loading"
+        },
+        fsAlert: {
+          type: String,
+          value: ""
+        }
+      },
+
+      observers: [
+        '__personObserver(personId, sessionId, ajaxBase)'
+      ],
+
+      __personObserver: function(personId, sessionId, ajaxBase) {
+        if (!sessionId || !ajaxBase) return;
+        var pid,
+            that = this;
+
+        if (personId && !this.personObj) {
+          pid = personId;
+        } else if (this.personObj && this.personObj.id && !this.personObj.lifeSketchConclusion) {
+          pid = this.personObj.id;
+        } else if (this.personObj && this.personObj.id && this.personObj.lifeSketchConclusion) {
+          // TODO: Find out what this.personObj.lifeSketchConclusion looks like.
+          this.lifesketch = this.personObj.lifeSketchConclusion.details;
+          this.loading = "";
+        }
+
+        if (pid) {
+          this._getLifesketch(pid).then(function(data){
+            that.lifesketch = data.details.text || "";
+            that.loading = "";
+          }, function(err){
+            console.warn("Something went wrong...", err);
+            that.loading = "";
+            that.fsAlert = "fs-alert fs-alert--error";
+          });
+        }
+      },
+
+      _isEmptyString: function(string) {
+        return string === "";
+      },
+
+      _hideReadOnlyViews: function(showForm, loading) {
+        return showForm || !this._isEmptyString(loading);
+      },
+
+      _saveLifesketch: function(e) {
+        var newLifesketch = this.$$('#lifesketchTextarea').value || "";
+        var justification = this.$$('#justificationTextarea').value;
+        if (!newLifesketch) {
+          console.error('No lifesketch inputted. Work on disabling the save button.')
+        } else {
+          if (this.lifesketch) {
+            // .then?
+            this._editLifesketch(newLifesketch);
+          } else {
+            // .then?
+            this._addLifesketch(newLifesketch);
+          }
+          //The following would go in the .then:
+          this.lifesketch = newLifesketch;
+          // Ensure this reset happens after the save function is called and is successful.
+          this.$$('#justificationTextarea').value = "";
+        }
+        this._toggleForm();
+      },
+
+      _cancelForm: function(e) {
+        this.$$('#lifesketchTextarea').value = this.lifesketch;
+        this.$$('#justificationTextarea').value = "";
+        this._toggleForm();
+      },
+
+      _getLifesketch: function(personId) {
+        if (personId && this.sessionId) {
+          var that = this;
+          return new Promise(function(resolve, reject) {
+            var GET_LIFESKETCH_URL = that.ajaxBase + "/tree-data/person/" + personId + "/conclusions/life-sketch";
+            GET_LIFESKETCH_URL += "?fsSessionId=" + that.sessionId;
+            return fetch(GET_LIFESKETCH_URL, {
+              credentials: 'same-origin'
+            }).then(function(resp){
+              if (resp.status < 400) {
+                return resp.json();
+              }
+              reject(resp.status);
+            }).then(function(resp){
+              if (resp) {
+                if (resp.data) {
+                  resolve(resp.data);
+                } else {
+                  resolve({ 'details': { 'text': null } });
+                }
+              }
+            }, function(error) {
+              console.warn(error.message);
+              resolve({ 'details': { 'text': null } });
+            }).catch(reject);
+          });
+        }
+      },
+
+      _addLifesketch: function(lifesketch) {
+        console.log('adding lifesketch of ' + this.personId);
+        if (this.personId && this.sessionId) {
+          var that = this;
+          return new Promise(function(resolve, reject) {
+            var tfLifesketch = {
+            conclusionType: "FACT",
+            value: {value: lifesketch, type: "http://familysearch.org/v1/LifeSketch"},
+            attribution: {changeMessage: ""}};
+            var POST_LIFESKETCH_URL = that.ajaxBase + "/tf/person/" + that.personId + "/conclusion/fact";
+            POST_LIFESKETCH_URL += "?fsSessionId=" + that.sessionId;
+            var config = {
+              method: 'POST',
+              headers: new Headers({'content-type': 'application/json'}),
+              body: JSON.stringify(tfLifesketch),
+              credentials: 'same-origin'
+            };
+            return fetch(POST_LIFESKETCH_URL, config).then(function(resp){
+              if (resp.status < 400) {
+                return resp.json();
+              }
+              reject(resp.status);
+            }).then(function(resp){
+              if (resp) {
+                resolve(resp.data);
+              }
+            }, function(error) {
+              console.warn(error.message);
+              resolve({ 'details': { 'text': null } });
+            }).catch(reject);
+          });
+        }
+      },
+
+      _editLifesketch: function() {
+        console.log('editing lifesketch of ' + this.personId);
+      },
+
+      _deleteLifesketch: function() {
+        console.log('deleting lifesketch of ' + this.personId);
+      },
+
+      _toggleForm: function() {
+        this.showForm = !this.showForm;
+      },
+
+      _toggleDeleteDialog: function() {
+        console.log('show delete dialog');
+      }
+    });
+  </script>
+</dom-module>
