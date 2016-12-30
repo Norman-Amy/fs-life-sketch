@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+  <body>
+
+    <!-- You can use the document as a place to set up your fixtures. -->
+    <script>
+      var annaElizabethHyler,
+          annaHylerNoBirthOrDeath,
+          annaHylerNoConclusions;
+
+      annaElizabethHyler =  {
+        "name": "Anna Elizabeth Hyler",
+        "isLiving": false,
+        "birthConclusion": {
+          "details": {
+            "date": {
+              "originalText": "Dec 1, 1896",
+              "localizedText": "1 December 1896"
+            },
+            "place": {
+              "originalText": "Salt Lake City,Salt Lake,Utah",
+              "localizedText": "Salt Lake City, Salt Lake, Utah, United States"
+            },
+            "type": "BIRTH"
+          }
+        },
+        "christeningConclusion": {
+          "details": {
+            "type": "CHRISTENING"
+          }
+        },
+        "deathConclusion": {
+          "details": {
+            "date": {
+              "originalText": "Jun 4, 1949",
+              "localizedText": "4 June 1949"
+            },
+            "place": {
+              "originalText": "Roggen, Weld, Colorado, United States",
+              "localizedText": "Roggen, Weld, Colorado, United States"
+            },
+            "type": "DEATH"
+          }
+        },
+        "burialConclusion": {
+          "details": {
+            "date": {
+              "originalText": "Jun 9, 1949",
+              "localizedText": "9 June 1949"
+            },
+            "place": {
+              "originalText": "Sandy City Cemetery, Sandy, Salt Lake, Utah, United States",
+              "localizedText": "Sandy City Cemetery, Sandy, Salt Lake, Utah, United States"
+            },
+            "type": "BURIAL"
+          }
+        }
+      };
+
+      annaHylerNoBirthOrDeath = {
+        "name": "Anna Hyler",
+        "birthConclusion": null,
+        "christeningConclusion": {
+          "details": {
+            "date": {
+              "originalText": "Dec 1, 1896",
+              "localizedText": "1 December 1896"
+            },
+            "place": {
+              "originalText": "Salt Lake City,Salt Lake,Utah",
+              "localizedText": "Salt Lake City, Salt Lake, Utah, United States"
+            },
+            "type": "CHRISTENING"
+          }
+        },
+        "deathConclusion": null,
+        "burialConclusion": {
+          "details": {
+            "date": {
+              "originalText": "Jun 9, 1949",
+              "localizedText": "9 June 1949"
+            },
+            "place": {
+              "originalText": "Sandy City Cemetery, Sandy, Salt Lake, Utah, United States",
+              "localizedText": "Sandy City Cemetery, Sandy, Salt Lake, Utah, United States"
+            },
+            "type": "BURIAL"
+          }
+        }
+      };
+
+      annaHylerNoConclusions = {
+        "name": "Anna Hyler",
+        "birthConclusion": null,
+        "christeningConclusion": null,
+        "deathConclusion": null,
+        "burialConclusion": null
+      };
+    </script>
+
+  </body>
+</html>

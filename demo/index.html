@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>fs-life-sketch demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../../fs-demo/fs-demo.html">
+    <link rel="import" href="../fs-life-sketch.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+  </head>
+  <body>
+
+    <template is="dom-bind">
+      <div>
+      <input type="text" name="" value="USYSF1580216F7B864FFBBF4BB237B5989D6_idses-refa05.a.fsglobal.net">
+    </div>
+    <fs-demo session-id="{{sessionId}}" base-url="{{baseUrl}}" pid="{{pid}}" locale="{{locale}}"></fs-demo>
+    <!-- <div class="vertical-section-container centered"> -->
+      <style>
+        .element-seed-wrapper {
+          display: -ms-flexbox;  /* TWEENER - IE 10 */
+          display: -webkit-flex; /* NEW - Safari 6.1+. iOS 7.1+, BB10 */
+          display: flex;
+          justify-content: space-around;
+          flex-flow: column;
+          align-items: left;
+        }
+        @media (max-width: 980px) {
+          .element-seed-wrapper {
+            flex-flow: column;    }
+        }
+        .flex-wrapper {
+          display: -ms-flexbox;  /* TWEENER - IE 10 */
+          display: -webkit-flex; /* NEW - Safari 6.1+. iOS 7.1+, BB10 */
+          display: flex;
+          margin-top:20px;
+          justify-content: space-around;
+          background:#f3f3f3;
+          padding:10px 0;
+        }
+        .flex-wrapper > div {
+          width:400px;
+          border:1px dashed #ccc;
+          background:#f9f9f9;
+          display:inline;
+          padding:5px;
+        }
+        #wrapper {
+          width:90%;
+        }
+        summary {
+          font-size: 16px;
+          font-weight: bolder;
+          margin-bottom: 5px;
+        }
+        .quick-click {
+          text-decoration: underline;
+          cursor: pointer;
+        }
+        @media (max-width: 1100px) {
+          .flex-wrapper {
+            flex-flow:column;
+          }
+        }
+      </style>
+
+      <div class="element-seed-wrapper">
+        <h1>Life Sketch Element</h1>
+
+        <div>
+        [[baseUrl]]
+          <fs-life-sketch session-id="[[sessionId]]" ajax-base="[[baseUrl]]" language="[[locale]]" person-id="[[pid]]"></fs-life-sketch>
+        </div>
+  </template>
+
+  </body>
+</html>

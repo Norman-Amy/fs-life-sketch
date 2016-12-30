@@ -1,0 +1,309 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+
+    <script src="../../webcomponentsjs/webcomponents.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+    <script src="../../es6-promise-polyfill/promise.js"></script>
+    <script src="../../fetch/fetch.js"></script>
+    <script src="../../fetch-mock/index.js"></script>
+
+    <!-- Step 1: import the element to test -->
+    <link rel="import" href="../fs-life-sketch.html">
+    <link rel="import" href="./person-test-data.html">
+  </head>
+  <body>
+
+    <!-- You can use the document as a place to set up your fixtures. -->
+    <!-- Standard Mode: Birth, Death. Active data -->
+    <test-fixture id="fs-life-sketch-fixture-active">
+      <template>
+        <fs-life-sketch person-id="KWC4-TLH" display-text="standard" needed-events="birth, death" language="en" persist-labels></fs-life-sketch>
+      </template>
+    </test-fixture>
+
+    <!-- Original Mode: Death, Birth. Passive data -->
+    <test-fixture id="fs-life-sketch-fixture-passive">
+      <template>
+        <fs-life-sketch needed-events="christening, burial" person-obj='{"name":"Anna Elizabeth Hyler","birthConclusion":{"details":{"date":{"originalText":"Dec 1, 1896","localizedText":"1 December 1896"},"place":{"originalText":"Salt Lake City,Salt Lake,Utah","localizedText":"Salt Lake City, Salt Lake, Utah, United States"},"type":"BIRTH"}},"christeningConclusion":{"details":{"type":"CHRISTENING"}},"deathConclusion":{"details":{"date":{"originalText":"Jun 4, 1949","localizedText":"4 June 1949"},"place":{"originalText":"Roggen, Colorado","localizedText":"Roggen, Weld, Colorado, United States"},"type":"DEATH"}},"burialConclusion":{"details":{"date":{"originalText":"Jun 9, 1949","localizedText":"9 June 1949"},"place":{"originalText":"Sandy City Cemetery, Sandy, Salt Lake, Utah, United States","localizedText":"Sandy City Cemetery, Sandy, Salt Lake, Utah, United States"},"type":"BURIAL"}}}'  language="en"></fs-life-sketch>
+      </template>
+    </test-fixture>
+
+    <!-- Standard Mode: Death-like. Passive data -->
+    <test-fixture id="fs-life-sketch-fixture-death-like">
+      <template>
+        <fs-life-sketch display-text="standard" needed-events="death" person-obj='{"name":"Anna Elizabeth Hyler","birthConclusion":{"details":{"type":"BIRTH"}},"christeningConclusion":{"details":{"type":"CHRISTENING"}},"deathConclusion":{"details":{"type":"DEATH"}},"burialConclusion":{"details":{"date":{"originalText":"Jun 9, 1949","localizedText":"9 June 1949"},"place":{"originalText":"Sandy City Cemetery, Sandy, Salt Lake, Utah, United States","localizedText":"Sandy City Cemetery, Sandy, Salt Lake, Utah, United States"},"type":"BURIAL"}}}'  language="en"></fs-life-sketch>
+      </template>
+    </test-fixture>
+
+    <script>
+    (function(){
+      describe('<fs-life-sketch>', function(){
+        var lifeEventFixtureActive,
+            lifeEventFixturePassive,
+            lifeEventFixtureDeathLike,
+            url;
+
+        beforeEach(function() {
+          url = /\/tree-data\/person\//;
+          // Stub the fetch call from person-data-service
+          fetchMock.get(url, annaElizabethHyler)
+
+          lifeEventFixtureActive = fixture('fs-life-sketch-fixture-active');
+          lifeEventFixturePassive = fixture('fs-life-sketch-fixture-passive');
+          lifeEventFixtureDeathLike = fixture('fs-life-sketch-fixture-death-like');
+
+        });
+
+        afterEach(function() {
+          fetchMock.restore();
+        });
+
+        describe('setup', function(){
+          it('defines the properties correctly before rendering lifeEventFixtureActive', function() {
+            assert.deepEqual(lifeEventFixtureActive.neededEvents, 'birth, death', "Incorrect neededEvents");
+            assert.equal(lifeEventFixtureActive.displayText, "standard", "Incorrect displayText");
+            assert.equal(lifeEventFixtureActive.personObj, undefined, "Incorrect personObj");
+            assert.equal(lifeEventFixtureActive.personId, "KWC4-TLH", "Incorrect personId");
+            assert.equal(lifeEventFixtureActive.fullPerson, true, "Incorrect fullPerson property");
+            assert.equal(lifeEventFixtureActive.persistLabels, true, "Incorrect persistLabels property");
+          });
+
+          it('defines the properties correctly before rendering lifeEventFixturePassive', function() {
+            assert.deepEqual(lifeEventFixturePassive.neededEvents, 'christening, burial', "Incorrect neededEvents");
+            assert.equal(lifeEventFixturePassive.displayText, "original", "Incorrect displayText");
+            assert.equal(lifeEventFixturePassive.personObj.name, "Anna Elizabeth Hyler", "Incorrect personObj");
+            assert.equal(lifeEventFixturePassive.personId, "", "Incorrect personId");
+            assert.equal(lifeEventFixturePassive.fullPerson, true, "Incorrect fullPerson property");
+            assert.equal(lifeEventFixturePassive.persistLabels, false, "Incorrect persistLabels property");
+          });
+
+          it('defines the properties correctly before rendering lifeEventFixtureDeathLike', function() {
+            assert.deepEqual(lifeEventFixtureDeathLike.neededEvents, 'death', "Incorrect neededEvents");
+            assert.equal(lifeEventFixtureDeathLike.displayText, "standard", "Incorrect displayText");
+            assert.equal(lifeEventFixtureDeathLike.personObj.name, "Anna Elizabeth Hyler", "Incorrect personObj");
+            assert.equal(lifeEventFixtureDeathLike.personId, "", "Incorrect personId");
+            assert.equal(lifeEventFixtureDeathLike.fullPerson, true, "Incorrect fullPerson property");
+            assert.equal(lifeEventFixtureDeathLike.persistLabels, false, "Incorrect persistLabels property");
+          });
+        });
+
+        describe('function tests' , function(){
+          var eventWithData,
+              eventWithoutData,
+              unformattedEvent;
+
+          beforeEach(function() {
+            eventWithData = {
+              "date": {
+                "originalText": "Dec 1, 1896",
+                "localizedText": "1 December 1896"
+              },
+              "place": {
+                "originalText": "Salt Lake City,Salt Lake,Utah",
+                "localizedText": "Salt Lake City, Salt Lake, Utah, United States"
+              },
+              "type": "Birth",
+              "upperCaseType": "BIRTH"
+            };
+            eventWithoutData = {
+              "date": {
+                "originalText": "",
+                "localizedText": ""
+              },
+              "place": {
+                "originalText": "",
+                "localizedText": ""
+              },
+              "type": "Birth"
+            };
+            unformattedEvent = {"date":{"originalText":"Dec 1, 1896","localizedText":"1 December 1896"},"place":{"originalText":"Salt Lake City,Salt Lake,Utah","localizedText":"Salt Lake City, Salt Lake, Utah, United States"},"type":"BIRTH"};
+
+          });
+
+
+          // TODO: Needs locale functionality
+          // describe('_getEventTitle', function(){
+          //   var item,
+          //       displayText,
+          //       titleTextCompare;
+
+          //   beforeEach(function(){
+          //     item = {
+          //       "date": {
+          //         "originalText": "Dec 1, 1896",
+          //         "localizedText": "1 December 1896"
+          //       },
+          //       "place": {
+          //         "originalText": "Salt Lake City,Salt Lake,Utah",
+          //         "localizedText": "Salt Lake City, Salt Lake, Utah, United States"
+          //       },
+          //       "type": "Birth",
+          //       "upperCaseType": "BIRTH"
+          //     };
+          //   });
+
+          //   it('should output the correct string for standard text', function(done){
+          //     // flush is required in order to have lifeEventFixtureActive.i18n
+          //     flush(function(){
+          //       displayText = "original";
+          //       titleTextCompare = "KEY: BIRTH (en)\nKEY: STANDARD_DATE (en) 1 December 1896\nKEY: STANDARD_PLACE (en) Salt Lake City, Salt Lake, Utah, United States";
+          //       assert.equal(lifeEventFixtureActive._getEventTitle(item, lifeEventFixtureActive.i18n, displayText), titleTextCompare, "Title did not match returned details");
+          //       done();
+          //     });
+          //   });
+
+          // it('should output the correct string for original text', function(done){
+          //     flush(function(){
+          //       displayText = "standard";
+          //       titleTextCompare = "KEY: BIRTH (en)\nKEY: ORIGINAL_DATE (en) Dec 1, 1896\nKEY: ORIGINAL_PLACE (en) Salt Lake City,Salt Lake,Utah";
+          //       assert.equal(lifeEventFixtureActive._getEventTitle(item, lifeEventFixtureActive.i18n, displayText), titleTextCompare, "Title did not match returned details");
+          //       done();
+          //     });
+          //   });
+          // });
+
+
+          describe('_getDisplayOriginalText' , function(){
+            it('should return true if Original mode is set', function() {
+              assert.equal(lifeEventFixtureActive._getDisplayOriginalText('original', eventWithData), true, "It did not return true when in Original mode");
+            });
+
+            it('should return false if Original mode is set, but no original text exists', function() {
+              assert.equal(lifeEventFixtureActive._getDisplayOriginalText('original', eventWithoutData), false, "It did not return false when in Original mode without data");
+            });
+
+            it('should return true if Original mode is false, but no standards exist', function() {
+              assert.equal(lifeEventFixtureActive._getDisplayOriginalText('standard', eventWithoutData), true, "It did not return true when there are no standards");
+            });
+
+            it('should return false if Original mode is not set, but there are standards', function() {
+              assert.equal(lifeEventFixtureActive._getDisplayOriginalText('standard', eventWithData), false, "It did not return false when not in Original mode with standards");
+            });
+          });
+
+
+          describe('_getDisplayStandardText' , function(){
+            it('should return true if Standard mode is set', function() {
+              assert.equal(lifeEventFixtureActive._getDisplayStandardText('standard', eventWithData), true, "It did not return true when in Standard mode");
+            });
+
+            it('should return false if Standard mode is set, but no standard text exists', function() {
+              assert.equal(lifeEventFixtureActive._getDisplayStandardText('standard', eventWithoutData), false, "It did not return false when in Standard mode without data");
+            });
+
+            it('should return true if Standard mode is false, but no standards exist', function() {
+              assert.equal(lifeEventFixtureActive._getDisplayStandardText('original', eventWithoutData), true, "It did not return true when there are no standards");
+            });
+
+            it('should return false if Standard mode is not set, but there are standards', function() {
+              assert.equal(lifeEventFixtureActive._getDisplayStandardText('original', eventWithData), false, "It did not return false when not in Standard mode with standards");
+            });
+          });
+
+          describe('_showLivingStatus' , function(){
+            var livingPerson;
+
+            beforeEach(function(){
+              livingPerson = {
+                isLiving: true
+              };
+            });
+
+            it('should return true if a person is living and the event type is "Death"', function() {
+              assert.equal(lifeEventFixtureActive._showLivingStatus(livingPerson, 'Death'), true, "It did not return true");
+            });
+
+            it('should return false if the person is not living', function() {
+              assert.equal(lifeEventFixtureActive._showLivingStatus(annaElizabethHyler, 'Death'), false, "It did not return false when person was not living");
+            });
+
+            it('should return false if the event type is "Birth"', function() {
+              assert.equal(lifeEventFixtureActive._showLivingStatus(livingPerson, 'Birth'), false, "It did not return false when event was not 'Death'");
+            });
+          });
+
+
+          describe('_getNeededEventsArr' , function(){
+            it('should return neededEvents as an array', function() {
+              assert.deepEqual(lifeEventFixtureActive._getNeededEventsArr('birth, death, christening'), ['birth', 'death', 'christening'], "It did not return the neededEvents as an array");
+            });
+
+            it('should not return anything is needed events is not provided', function() {
+              assert.equal(lifeEventFixtureActive._getNeededEventsArr(""), undefined, "It should not have returned anything");
+            });
+          });
+
+
+          describe('_formatEventType' , function(){
+            it('should properly format an event with normalized text', function() {
+              assert.deepEqual(lifeEventFixtureActive._formatEventType(unformattedEvent), eventWithData, "It did not return the formatted event correctly");
+            });
+
+            it('should returned undefined if there is no event', function() {
+              assert.deepEqual(lifeEventFixtureActive._formatEventType(), undefined, "It did not return undefined");
+            });
+          });
+
+
+          describe('_filterBirthAndDeathLike', function(){
+            var neededEventsArr,
+                neededEventsCompare,
+                eventsToDisplayCompare;
+
+            it('should replace birth with christening if birth is requested but does not exist', function(){
+              neededEventsArr = ["birth", "burial"];
+              neededEventsCompare = ["christening", "burial"];
+              assert.deepEqual(lifeEventFixtureActive._filterBirthAndDeathLike(neededEventsArr, annaHylerNoBirthOrDeath), neededEventsCompare, "Birth was not replaced with Christening");
+            });
+
+            it('should replace death with burial if death is requested but does not exist', function(){
+              neededEventsArr = ["death", "christening"];
+              neededEventsCompare = ["burial", "christening"];
+              assert.deepEqual(lifeEventFixtureActive._filterBirthAndDeathLike(neededEventsArr, annaHylerNoBirthOrDeath), neededEventsCompare, "Death was not replaced with Burial");
+            });
+
+            it('should not replace birth with christening if christening but does not exist', function(){
+              neededEventsArr = ["birth", "burial"];
+              neededEventsCompare = ["birth", "burial"];
+              assert.deepEqual(lifeEventFixtureActive._filterBirthAndDeathLike(neededEventsArr, annaHylerNoConclusions), neededEventsCompare, "Birth was replaced with Christening");
+            });
+
+            it('should not replace death with burial if burial does not exist', function(){
+              neededEventsArr = ["death", "christening"];
+              neededEventsCompare = ["death", "christening"];
+              assert.deepEqual(lifeEventFixtureActive._filterBirthAndDeathLike(neededEventsArr, annaHylerNoConclusions), neededEventsCompare, "Death was replaced with Burial");
+            });
+          });
+
+          describe('_getEventsToDisplay', function(){
+            var neededEvents,
+                eventsToDisplayCompare,
+                eventsToDisplayPersistCompare,
+                persistLabels;
+
+            beforeEach(function(){
+              neededEvents = "birth, death";
+              eventsToDisplayCompare = [{"date":{"originalText":"Dec 1, 1896","localizedText":"1 December 1896"},"place":{"originalText":"Salt Lake City,Salt Lake,Utah","localizedText":"Salt Lake City, Salt Lake, Utah, United States"},"type":"Birth","upperCaseType":"BIRTH"}, {"date":{"originalText":"Jun 4, 1949","localizedText":"4 June 1949"},"place":{"originalText":"Roggen, Weld, Colorado, United States","localizedText":"Roggen, Weld, Colorado, United States"},"type":"Death","upperCaseType":"DEATH"}];
+              eventsToDisplayPersistCompare = [{"type": "Birth", "upperCaseType": "BIRTH"}, {"type": "Death", "upperCaseType": "DEATH"}]
+            });
+
+            it('should return an array of the event data needed', function(){
+              persistLabels = false;
+              assert.deepEqual(lifeEventFixtureActive._getEventsToDisplay(neededEvents, annaElizabethHyler, persistLabels), eventsToDisplayCompare, "Returned eventsToDisplay did not match what was expected");
+            });
+
+            it('should return an array with birth and death if persistLabels is true', function(){
+              persistLabels = true;
+              assert.deepEqual(lifeEventFixtureActive._getEventsToDisplay(neededEvents, annaHylerNoConclusions, persistLabels), eventsToDisplayPersistCompare, "Returned eventsToDisplay did not match what was expected");
+            });
+          });
+        });
+      });
+    })();
+    </script>
+
+  </body>
+</html>
