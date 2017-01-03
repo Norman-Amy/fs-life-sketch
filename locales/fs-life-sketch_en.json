@@ -18,7 +18,7 @@
     "DELETE_FAILED_MESSAGE": "Unable to delete life sketch.",
     "EDIT_FAILED_MESSAGE": "Unable to edit life sketch.",
     "ADD_FAILED_MESSAGE": "Unable to add life sketch.",
-    "SHOW_NOTES_FAILED_MESSAGE": "Unable to read life sketch.",
-    "SHOW_NOTES_UNAVAILABLE_MESSAGE": "Life Sketch is unavailable for living people.",
-    "TODAY": "Today"
+    "GET_FAILED_MESSAGE": "Unable to read life sketch.",
+    "TODAY": "Today",
+    "YOU": "you"
 }

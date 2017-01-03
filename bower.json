@@ -8,6 +8,7 @@
     "fs-person-data-service": "fs-webdev/fs-person-data-service#master",
     "oak-ajax-behavior": "FamilySearchElements/oak-ajax-behavior#^1.0.0",
     "fs-styles": "fs-webdev/fs-styles",
+    "styles-wc": "fs-webdev/styles-wc",
     "dialog-el": "git+https://github.com/jshcrowthe/dialog-el",
     "fetch": "github/fetch#^1.0.0"
   },
@@ -29,6 +30,7 @@
     "wct.conf.json"
   ],
   "resolutions": {
-    "mocha": "^3.1.2"
+    "mocha": "^3.1.2",
+    "promise-polyfill": "^6.0.1"
   }
 }
