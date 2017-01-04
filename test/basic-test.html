@@ -225,32 +225,21 @@
             });
 
             it('should call _editLifesketch if a lifesketch already existed', function(){
-              var lifesketchTextarea = document.createElement("TEXTAREA");
-              lifesketchTextarea.id = "lifesketchTextarea";
-              lifesketchFixtureActive.appendChild(lifesketchTextarea);
-              document.getElementById("lifesketchTextarea").value = "New lifesketch";
               lifesketchFixtureActive.lifesketch = "Old lifesketch";
-
-              var justificationTextarea = document.createElement("TEXTAREA");
-              justificationTextarea.id = "justificationTextarea";
-              lifesketchFixtureActive.appendChild(justificationTextarea);
-              document.getElementById("justificationTextarea").value = "My reason statement";
+              lifesketchFixtureActive.$.lifesketchTextarea.value = "New lifesketch";
+              lifesketchFixtureActive.$.justificationTextarea.value = "My reason statement";
 
               lifesketchFixtureActive._saveLifesketch();
               expect(_editLifesketchSpy.called, "_editLifesketchSpy was not called").to.be.true;
               expect(_editLifesketchSpy.calledWith("New lifesketch", "My reason statement"), "_editLifesketchSpy was not called with the correct parameters").to.be.true;
-              lifesketchFixtureActive.removeChild(lifesketchTextarea);
-              lifesketchFixtureActive.removeChild(justificationTextarea);
             });
 
             it('should call _addLifesketch if a lifesketch did not already exist', function(){
-              var lifesketchTextarea = document.createElement("TEXTAREA");
-              lifesketchTextarea.id = "lifesketchTextarea";
-              lifesketchFixtureActive.appendChild(lifesketchTextarea);
-              document.getElementById("lifesketchTextarea").value = "New lifesketch";
+              lifesketchFixtureActive.lifesketch = "";
+              lifesketchFixtureActive.$.lifesketchTextarea.value = "New lifesketch";
+              lifesketchFixtureActive.$.justificationTextarea.value = "";
               lifesketchFixtureActive._saveLifesketch();
               expect(_addLifesketchSpy.called, "_addLifesketchSpy was not called").to.be.true;
-              lifesketchFixtureActive.removeChild(lifesketchTextarea);
             });
           });
 
@@ -267,30 +256,129 @@
             });
 
             it('should clear both textareas and then call _toggleForm', function(){
-              var lifesketchTextarea = document.createElement("TEXTAREA");
-              lifesketchTextarea.id = "lifesketchTextarea";
-              lifesketchFixtureActive.appendChild(lifesketchTextarea);
-              document.getElementById("lifesketchTextarea").value = "New lifesketch";
-
-              var justificationTextarea = document.createElement("TEXTAREA");
-              justificationTextarea.id = "justificationTextarea";
-              lifesketchFixtureActive.appendChild(justificationTextarea);
-              document.getElementById("justificationTextarea").value = "My reason statement";
+              lifesketchFixtureActive.$.lifesketchTextarea.value = "New lifesketch";
+              lifesketchFixtureActive.$.justificationTextarea.value = "My reason statement";
 
               lifesketchFixtureActive._cancelForm();
 
-              expect(document.getElementById("lifesketchTextarea").value, "lifesketchTextarea was not cleared").to.equal("");
-              expect(document.getElementById("justificationTextarea").value, "justificationTextarea was not cleared").to.equal("");
+              expect(lifesketchFixtureActive.$.lifesketchTextarea.value, "lifesketchTextarea was not cleared").to.equal("");
+              expect(lifesketchFixtureActive.$.justificationTextarea.value, "justificationTextarea was not cleared").to.equal("");
               expect(_toggleFormSpy.called, "_toggleForm was not called").to.be.true;
-              lifesketchFixtureActive.removeChild(lifesketchTextarea);
-              lifesketchFixtureActive.removeChild(justificationTextarea);
             });
           });
 
-          // TODO: Finish unit tests
-          describe('', function(){
-            it('should', function(){
 
+          describe('_inputTextareaHandler', function(){
+            it('should not remove the disabled attribute from the save without input changes.', function(){
+              lifesketchFixtureActive.lifesketch = "Old lifesketch";
+              lifesketchFixtureActive.$.lifesketchTextarea.value = lifesketchFixtureActive.lifesketch;
+
+              lifesketchFixtureActive._inputTextareaHandler();
+
+              expect(lifesketchFixtureActive.$.save.getAttribute("disabled"), "disabled attribute was not removed").to.equal('true');
+              expect(lifesketchFixtureActive.charCount, "charCount was not updated").to.not.equal(10000);
+              expect(lifesketchFixtureActive.showModifiedTodayText, "showModifiedTodayText was not updated").to.be.true;
+            });
+
+            it('should remove the disabled attribute from the save when the input changes.', function(){
+              lifesketchFixtureActive.lifesketch = "Old lifesketch";
+              lifesketchFixtureActive.$.lifesketchTextarea.value = lifesketchFixtureActive.lifesketch;
+              lifesketchFixtureActive.$.lifesketchTextarea.value = "New lifesketch";
+
+              lifesketchFixtureActive._inputTextareaHandler();
+
+              expect(lifesketchFixtureActive.$.save.getAttribute("disabled"), "disabled attribute was not removed").to.be.null;
+              expect(lifesketchFixtureActive.charCount, "charCount was not updated").to.not.equal(10000);
+              expect(lifesketchFixtureActive.showModifiedTodayText, "showModifiedTodayText was not updated").to.be.true;
+            });
+          });
+
+
+          describe('_prepareDeleteLifesketch', function(){
+            var _deleteLifesketchSpy,
+                delete_url;
+
+            beforeEach(function(){
+              delete_url = /\/tf\/person\//;
+              fetchMock.delete(delete_url, {});
+              _deleteLifesketchSpy = sinon.spy(lifesketchFixtureActive, "_deleteLifesketch");
+            });
+
+            afterEach(function(){
+              fetchMock.restore();
+              _deleteLifesketchSpy.restore();
+            });
+
+            it('should call _deleteLifesketch', function(){
+              var reason = "This needs to be deleted because...";
+              lifesketchFixtureActive.$.deleteModalReason.value = reason;
+
+              lifesketchFixtureActive._prepareDeleteLifesketch();
+              expect(_deleteLifesketchSpy.calledOnce, "__deleteLifesketch was not called once").to.be.true;
+              expect(_deleteLifesketchSpy.calledWith(reason), "__deleteLifesketch was not called with the reason statement").to.be.true;
+            });
+          });
+
+
+          describe('_toggleForm', function(){
+            it('should change the value of showForm to true if it was false and update the charCount and errorMessageText', function(){
+              lifesketchFixtureActive.lifesketch = "A lifesketch";
+              lifesketchFixtureActive.showForm = false;
+              lifesketchFixtureActive.errorMessageText = "Error";
+              lifesketchFixtureActive.charCount = 10000;
+
+              lifesketchFixtureActive._toggleForm();
+
+              expect(lifesketchFixtureActive.showForm, "showForm did not change to true").to.be.true;
+              expect(lifesketchFixtureActive.errorMessageText, "errorMessageText was not reset").to.equal("");
+              expect(lifesketchFixtureActive.charCount, "charCount was not updated").to.not.equal(10000);
+            });
+
+            it('should change the value of showForm to false if it was true', function(){
+              lifesketchFixtureActive.lifesketch = "A lifesketch";
+              lifesketchFixtureActive.showForm = true;
+              lifesketchFixtureActive.errorMessageText = "Error";
+              lifesketchFixtureActive.charCount = 10000;
+
+              lifesketchFixtureActive._toggleForm();
+
+              expect(lifesketchFixtureActive.showForm, "showForm did not change to false").to.be.false;
+              expect(lifesketchFixtureActive.errorMessageText, "errorMessageText was incorrectly reset").to.equal("Error");
+              expect(lifesketchFixtureActive.charCount, "charCount was not updated").to.equal(10000);
+            });
+          });
+
+
+          describe('_toggleDeleteDialog', function(){
+            var dialogEl,
+                deleteModalReason,
+                reason,
+                showStub,
+                closeStub;
+
+            beforeEach(function(){
+              reason = "This needs to be deleted because...";
+              lifesketchFixtureActive.$.deleteModalReason.value = reason;
+
+              showStub = sinon.stub(lifesketchFixtureActive.$.deleteModal, "show");
+              closeStub = sinon.stub(lifesketchFixtureActive.$.deleteModal, "close");
+            });
+
+            afterEach(function(){
+              showStub.restore();
+              closeStub.restore();
+            });
+
+            it('should show the dialog if it was hidden', function(){
+              lifesketchFixtureActive._toggleDeleteDialog();
+              expect(showStub.called, "show was not called").to.be.true;
+            });
+
+            it('should close the dialog and reset the reason textarea if it was showing', function(){
+              lifesketchFixtureActive.$.deleteModal.removeAttribute("hidden");
+              lifesketchFixtureActive._toggleDeleteDialog();
+              expect(lifesketchFixtureActive.$.deleteModalReason.value).to.equal("");
+              expect(closeStub.called, "close was not called").to.be.true;
             });
           });
         });
