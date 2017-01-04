@@ -40,8 +40,7 @@
 
         beforeEach(function() {
           get_url = /\/tree-data\/person\//;
-          // Stub the fetch call from person-data-service
-          fetchMock.get(get_url, { "data": annaHylerEndpoint })
+          fetchMock.get(get_url, { "data": annaHylerGetEndpoint })
 
           lifesketchFixtureActive = fixture('fs-life-sketch-fixture-active');
           lifesketchFixturePassive = fixture('fs-life-sketch-fixture-passive');
@@ -83,7 +82,217 @@
         });
 
         describe('function tests' , function(){
+          describe('__personIdObserver', function(){
+            var _getLifesketchSpy;
 
+            beforeEach(function(){
+              _getLifesketchSpy = sinon.spy(lifesketchFixtureActive, "_getLifesketch");
+            });
+
+            afterEach(function(){
+              _getLifesketchSpy.restore();
+            });
+
+            it('should call _getLifesketch if personId is set and not personObj', function(){
+              lifesketchFixtureActive.__personIdObserver(lifesketchFixtureActive.personId, lifesketchFixtureActive.sessionId, lifesketchFixtureActive.ajaxBase);
+              expect(_getLifesketchSpy.called, "_getLifesketch was not called").to.be.true;
+              expect(_getLifesketchSpy.calledWith(lifesketchFixtureActive.personId), "_getLifesketch was not called with the person id").to.be.true;
+            });
+
+            it('should not call _getLifesketch if personObj is set', function(){
+              lifesketchFixtureActive.personObj = { "id": lifesketchFixtureActive.personId };
+              // Reset the spy because it is called in the personObjObserver
+              _getLifesketchSpy.reset();
+              lifesketchFixtureActive.__personIdObserver(lifesketchFixtureActive.personId, lifesketchFixtureActive.sessionId, lifesketchFixtureActive.ajaxBase);
+              expect(_getLifesketchSpy.called, "_getLifesketch was called").to.be.false;
+
+              lifesketchFixtureActive.personObj = undefined;
+            });
+          });
+
+
+          describe('__personObjObserver', function(){
+            var _getLifesketchSpy;
+
+            beforeEach(function(){
+              _getLifesketchSpy = sinon.spy(lifesketchFixtureActive, "_getLifesketch");
+            });
+
+            afterEach(function(){
+              _getLifesketchSpy.restore();
+            });
+
+            it('should call _getLifesketch if personObj has an id but no conclusion', function(){
+              lifesketchFixtureActive.personObj = { "id": lifesketchFixtureActive.personId };
+              expect(_getLifesketchSpy.called, "_getLifesketch was not called").to.be.true;
+              expect(_getLifesketchSpy.calledWith(lifesketchFixtureActive.personId), "_getLifesketch was not called with the person id").to.be.true;
+              lifesketchFixtureActive.personObj = undefined;
+            });
+
+            it('should not call _getLifesketch if personObj has a conclusion', function(){
+              lifesketchFixtureActive.personObj = { "id": lifesketchFixtureActive.personId, "lifeSketchConclusion": { "details": {} }};
+              expect(_getLifesketchSpy.called, "_getLifesketch was called").to.be.false;
+
+              lifesketchFixtureActive.personObj = undefined;
+            });
+          });
+
+
+          describe('_isEmptyString', function(){
+            it('should return true if the string is empty', function(){
+              expect(lifesketchFixtureActive._isEmptyString(""), "_isEmptyString did not return true").to.be.true;
+            });
+
+            it('should return false if the string is not empty', function(){
+              expect(lifesketchFixtureActive._isEmptyString("hello"), "_isEmptyString did not return false").to.be.false;
+            });
+          });
+
+
+          describe('_hideReadOnlyViews', function(){
+            var showForm,
+                loadingClass;
+
+            it('should return true if showForm is true', function(){
+              showForm = true;
+              loadingClass = "";
+              expect(lifesketchFixtureActive._hideReadOnlyViews(showForm, loadingClass), "_hideReadOnlyViews did not return true").to.be.true;
+            });
+
+            it('should return true if loadingClass is "spinner"', function(){
+              showForm = false;
+              loadingClass = "spinner";
+              expect(lifesketchFixtureActive._hideReadOnlyViews(showForm, loadingClass), "_hideReadOnlyViews did not return true").to.be.true;
+            });
+
+            it('should return false if showForm is false and loadingClass is an empty string', function(){
+              showForm = false;
+              loadingClass = "";
+              expect(lifesketchFixtureActive._hideReadOnlyViews(showForm, loadingClass), "_hideReadOnlyViews did not return false").to.be.false;
+            });
+          });
+
+
+          describe('_hideMainSpinner', function(){
+            var showForm,
+                loadingClass;
+
+            it('should return true if showForm is true and loadingClass is not an empty string', function(){
+              showForm = true;
+              loadingClass = "spinner";
+              expect(lifesketchFixtureActive._hideMainSpinner(showForm, loadingClass), "_hideMainSpinner did not return true").to.be.true;
+            });
+
+            it('should return true if loadingClass is an empty string', function(){
+              showForm = false;
+              loadingClass = "";
+              expect(lifesketchFixtureActive._hideMainSpinner(showForm, loadingClass), "_hideMainSpinner did not return true").to.be.true;
+            });
+
+            it('should return false if showForm is false and loadingClass is not an empty string', function(){
+              showForm = false;
+              loadingClass = "spinner";
+              expect(lifesketchFixtureActive._hideMainSpinner(showForm, loadingClass), "_hideMainSpinner did not return false").to.be.false;
+            });
+          });
+
+
+          describe('_saveLifesketch', function(){
+            var _addLifesketchSpy,
+                _editLifesketchSpy,
+                consoleErrorStub,
+                save_url;
+
+            beforeEach(function(){
+              save_url = /\/tf\/person\//;
+              fetchMock.put(save_url, { "value": annaHylerSaveEndpoint });
+              fetchMock.post(save_url, { "value": annaHylerSaveEndpoint });
+              _addLifesketchSpy = sinon.spy(lifesketchFixtureActive, "_addLifesketch");
+              _editLifesketchSpy = sinon.spy(lifesketchFixtureActive, "_editLifesketch");
+              consoleErrorStub = sinon.stub(console, "error");
+            });
+
+            afterEach(function(){
+              fetchMock.restore();
+              _addLifesketchSpy.restore();
+              _editLifesketchSpy.restore();
+              consoleErrorStub.restore();
+            });
+
+            it('should trigger a console error if no new lifesketch was inputted', function(){
+              lifesketchFixtureActive._saveLifesketch();
+              expect(consoleErrorStub.called, "console.error was not called").to.be.true;
+            });
+
+            it('should call _editLifesketch if a lifesketch already existed', function(){
+              var lifesketchTextarea = document.createElement("TEXTAREA");
+              lifesketchTextarea.id = "lifesketchTextarea";
+              lifesketchFixtureActive.appendChild(lifesketchTextarea);
+              document.getElementById("lifesketchTextarea").value = "New lifesketch";
+              lifesketchFixtureActive.lifesketch = "Old lifesketch";
+
+              var justificationTextarea = document.createElement("TEXTAREA");
+              justificationTextarea.id = "justificationTextarea";
+              lifesketchFixtureActive.appendChild(justificationTextarea);
+              document.getElementById("justificationTextarea").value = "My reason statement";
+
+              lifesketchFixtureActive._saveLifesketch();
+              expect(_editLifesketchSpy.called, "_editLifesketchSpy was not called").to.be.true;
+              expect(_editLifesketchSpy.calledWith("New lifesketch", "My reason statement"), "_editLifesketchSpy was not called with the correct parameters").to.be.true;
+              lifesketchFixtureActive.removeChild(lifesketchTextarea);
+              lifesketchFixtureActive.removeChild(justificationTextarea);
+            });
+
+            it('should call _addLifesketch if a lifesketch did not already exist', function(){
+              var lifesketchTextarea = document.createElement("TEXTAREA");
+              lifesketchTextarea.id = "lifesketchTextarea";
+              lifesketchFixtureActive.appendChild(lifesketchTextarea);
+              document.getElementById("lifesketchTextarea").value = "New lifesketch";
+              lifesketchFixtureActive._saveLifesketch();
+              expect(_addLifesketchSpy.called, "_addLifesketchSpy was not called").to.be.true;
+              lifesketchFixtureActive.removeChild(lifesketchTextarea);
+            });
+          });
+
+
+          describe('_cancelForm', function(){
+            var _toggleFormSpy;
+
+            beforeEach(function(){
+              _toggleFormSpy = sinon.spy(lifesketchFixtureActive, "_toggleForm");
+            });
+
+            afterEach(function(){
+              _toggleFormSpy.restore();
+            });
+
+            it('should clear both textareas and then call _toggleForm', function(){
+              var lifesketchTextarea = document.createElement("TEXTAREA");
+              lifesketchTextarea.id = "lifesketchTextarea";
+              lifesketchFixtureActive.appendChild(lifesketchTextarea);
+              document.getElementById("lifesketchTextarea").value = "New lifesketch";
+
+              var justificationTextarea = document.createElement("TEXTAREA");
+              justificationTextarea.id = "justificationTextarea";
+              lifesketchFixtureActive.appendChild(justificationTextarea);
+              document.getElementById("justificationTextarea").value = "My reason statement";
+
+              lifesketchFixtureActive._cancelForm();
+
+              expect(document.getElementById("lifesketchTextarea").value, "lifesketchTextarea was not cleared").to.equal("");
+              expect(document.getElementById("justificationTextarea").value, "justificationTextarea was not cleared").to.equal("");
+              expect(_toggleFormSpy.called, "_toggleForm was not called").to.be.true;
+              lifesketchFixtureActive.removeChild(lifesketchTextarea);
+              lifesketchFixtureActive.removeChild(justificationTextarea);
+            });
+          });
+
+          // TODO: Finish unit tests
+          describe('', function(){
+            it('should', function(){
+
+            });
+          });
         });
       });
     })();

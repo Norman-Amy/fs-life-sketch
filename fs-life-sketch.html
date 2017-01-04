@@ -361,6 +361,7 @@ a way to read and write to that data and cache. **
         if (personObj && typeof(personObj) === "string") {
           personObj = JSON.parse(personObj);
         }
+
         // If there's a personObj and an ID but no lifeSketchConclusion, request it, else use the existing conclusion
         if (personObj && personObj.id && !personObj.lifeSketchConclusion) {
           if (!sessionId || !ajaxBase) return;
@@ -457,6 +458,7 @@ a way to read and write to that data and cache. **
               that.conclusionId = resp.conclusionId;
               that.contributor = resp.contributor;
               that.$$('#justificationTextarea').value = "";
+              that._toggleForm();
             }, function(error){
               console.error("Could not edit lifesketch", error);
               that.errorMessageText = "EDIT_FAILED_MESSAGE";
@@ -468,8 +470,7 @@ a way to read and write to that data and cache. **
               that.lifesketch = resp.value.value;
               that.conclusionId = resp.conclusionId;
               that.contributor = resp.contributor;
-              // TODO - Add Modified by text.
-              this._toggleForm();
+              that._toggleForm();
             }, function(error){
               console.error("Could not add lifesketch", error);
               that.errorMessageText = "ADD_FAILED_MESSAGE";
