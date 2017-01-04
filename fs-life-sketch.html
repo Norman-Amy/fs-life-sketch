@@ -171,7 +171,6 @@ a way to read and write to that data and cache. **
             <button id="openDeleteModal" class="fs-button fs-button--minor" on-tap="_toggleDeleteDialog">[[i18n('DELETE')]]</button>
           </div>
           <p class="text">[[lifesketch]]</p>
-
         </div>
         <div class="add-view" hidden$="[[!_isEmptyString(lifesketch)]]">
           <button id="openForm" class="fs-button fs-button--minor add-lifesketch" on-tap="_toggleForm">
@@ -306,7 +305,8 @@ a way to read and write to that data and cache. **
       },
 
       observers: [
-        '__personObserver(personId, sessionId, ajaxBase)',
+        '__personIdObserver(personId, sessionId, ajaxBase)',
+        '__personObjObserver(personObj, sessionId, ajaxBase)',
         '__lifesketchObserver(lifesketch)'
       ],
 
@@ -321,23 +321,55 @@ a way to read and write to that data and cache. **
       },
 
       /**
-       * Listens for when the person has changed and will either request the data or use data already passed in.
+       * Listens for when the personId has changed and will request the data if only the personId is present.
        * @param {String} personId - The id of the person to be requested.
-       * @param {String} sessionId - The id of the session for the request.
-       * @param {String} ajaxBase - The environment to make the request against (beta, integration, etc.).
        */
-      __personObserver: function(personId, sessionId, ajaxBase) {
-        if (!sessionId || !ajaxBase) return;
+      __personIdObserver: function(personId, sessionId, ajaxBase) {
+        if (!personId || !sessionId || !ajaxBase) return;
+        var that = this;
+
+        //Only request the data if the personId exists but not the personObj.
+        if (personId && !this.personObj) {
+          // Reset error messages
+          this.errorMessageText = "";
+          this._getLifesketch(personId).then(function(data){
+            that.lifesketch = data.details.text || "";
+            that.conclusionId = data.id || "";
+            that.contributor = data.contributor || {};
+            if (!that.lifesketch) {
+              this.showModifiedTodayText = true;
+            }
+          }, function(err){
+            console.warn("Something went wrong...", err);
+            that.errorMessageText = "GET_FAILED_MESSAGE";
+          }).then(function(){
+            that.loadingClass = "";
+          });
+        }
+      },
+
+      /**
+       * Listens for when the personObj has changed and will use data already passed in.
+       * @param {String} personObj - The passive data of the person passed in.
+       */
+      __personObjObserver: function(personObj, sessionId, ajaxBase) {
+        if (!personObj) return;
         var pid,
             that = this;
 
-        if (personId && !this.personObj) {
-          pid = personId;
-        } else if (this.personObj && this.personObj.id && !this.personObj.lifeSketchConclusion) {
-          pid = this.personObj.id;
-        } else if (this.personObj && this.personObj.id && this.personObj.lifeSketchConclusion) {
-          // TODO: Find out what this.personObj.lifeSketchConclusion looks like.
-          this.lifesketch = this.personObj.lifeSketchConclusion.details;
+        // This is mostly for the sake of the unit tests.
+        if (personObj && typeof(personObj) === "string") {
+          personObj = JSON.parse(personObj);
+        }
+        // If there's a personObj and an ID but no lifeSketchConclusion, request it, else use the existing conclusion
+        if (personObj && personObj.id && !personObj.lifeSketchConclusion) {
+          if (!sessionId || !ajaxBase) return;
+          pid = personObj.id;
+        } else if (personObj && personObj.id && personObj.lifeSketchConclusion) {
+          // TODO: Find out what personObj.lifeSketchConclusion looks like.
+          this.lifesketch = personObj.lifeSketchConclusion.details.value;
+          this.contributor = personObj.lifeSketchConclusion.details.contributor;
+          this.conclusionId = personObj.lifeSketchConclusion.details.id;
           this.loadingClass = "";
         }
 
