@@ -145,6 +145,16 @@ a way to read and write to that data and cache. **
         top: 4px;
       }
 
+      button.add-lifesketch .button-text {
+        position: relative;
+        top: -3px;
+      }
+
+      button.add-lifesketch fs-icon {
+        width: 16px;
+        height: 16px;
+      }
+
       dialog-el textarea {
         min-width: 400px;
         font-size: 0.875rem;
@@ -174,8 +184,9 @@ a way to read and write to that data and cache. **
         </div>
         <div class="add-view" hidden$="[[!_isEmptyString(lifesketch)]]">
           <button id="openForm" class="fs-button fs-button--minor add-lifesketch" on-tap="_toggleForm">
-          <fs-icon icon="check"></fs-icon>
-          [[i18n('ADD')]]</button>
+          <fs-icon icon="add"></fs-icon>
+          <span class="button-text">[[i18n('ADD')]]</span>
+          </button>
         </div>
       </div>
       <div class="form" hidden$="[[!showForm]]">
