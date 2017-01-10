@@ -218,7 +218,7 @@ a way to read and write to that data and cache. **
               <fs-icon icon="[[loadingClass]]" hidden$="[[!loadingClass]]"></fs-icon>
               [[i18n('SAVE')]]
             </button>
-            <button id="cancel" class="fs-button fs-button--minor" on-tap="_toggleForm">[[i18n('CANCEL')]]</button>
+            <button id="cancel" class="fs-button fs-button--minor" on-tap="_cancelForm">[[i18n('CANCEL')]]</button>
             <div class="fs-alert fs-alert--error" hidden$="[[_isEmptyString(errorMessageText)]]">[[i18n(errorMessageText)]]</div>
           </div>
         </div>
@@ -347,13 +347,13 @@ a way to read and write to that data and cache. **
             that.lifesketch = data.details.text || "";
             that.conclusionId = data.id || "";
             that.contributor = data.contributor || {};
-            if (!that.lifesketch) {
-              this.showModifiedTodayText = true;
-            }
           }, function(err){
             console.warn("Something went wrong...", err);
             that.errorMessageText = "GET_FAILED_MESSAGE";
           }).then(function(){
+            if (!that.lifesketch) {
+              that.showModifiedTodayText = true;
+            }
             that.loadingClass = "";
           });
         }
@@ -394,7 +394,7 @@ a way to read and write to that data and cache. **
             that.conclusionId = data.id || "";
             that.contributor = data.contributor || {};
             if (!that.lifesketch) {
-              this.showModifiedTodayText = true;
+              that.showModifiedTodayText = true;
             }
           }, function(err){
             console.warn("Something went wrong...", err);
@@ -498,9 +498,9 @@ a way to read and write to that data and cache. **
        *  then closes the form.
        */
       _cancelForm: function() {
+        this._toggleForm();
         this.$$('#lifesketchTextarea').value = this.lifesketch;
         this.$$('#justificationTextarea').value = "";
-        this._toggleForm();
       },
 
       /**
